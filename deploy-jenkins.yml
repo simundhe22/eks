@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: myjenkinsvcv
+  labels:
+    app: jenkinsapp
+spec:
+  ports:
+    - port: 8080
+  selector:
+    app: jenkinsapp
+    tier: frontened
+  type: LoadBalancer
+---
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: my-jenkins
+  labels:
+    app: jenkinsapp
+spec:
+  selector:
+    matchLabels:
+      app: jenkinsapp
+      tier: frontened
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: jenkinsapp
+        tier: frontened
+    spec:
+      containers:
+      - image: jenkins/jenkins
+        name: myjenkins
+        env:
+        - name: MYJENKINS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: myjenkins-pass
+              key: password
+        ports:
+        - containerPort: 8080
+          name: mysql
+        volumeMounts:
+        - name: myjenkins-persistent-storage
+          mountPath: /var/jenkins_home
+      volumes:
+      - name: myjenkins-persistent-storage
+        persistentVolumeClaim:
+          claimName: efs-myjenkins
